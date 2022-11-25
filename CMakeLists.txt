@@ -19,7 +19,6 @@ target_include_directories(app PUBLIC
 target_sources(app PRIVATE
 	src/main.c
 	src/bt_main.c
-	src/cmds.c
 )
 
 zephyr_library_include_directories(${ZEPHYR_BASE}/samples/bluetooth)

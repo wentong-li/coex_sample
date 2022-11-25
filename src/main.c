@@ -24,7 +24,7 @@ LOG_MODULE_REGISTER(sta, CONFIG_LOG_DEFAULT_LEVEL);
 #include <zephyr/net/net_event.h>
 #include <zephyr/net/socket.h>
 #include <zephyr/shell/shell_uart.h>
-
+#include <zephyr/bluetooth/conn.h>
 #include "zperf.h"
 #define CONFIG_NET_ZPERF_MAX_PACKET_SIZE 1024
 #include "zperf_internal.h"
@@ -32,6 +32,16 @@ LOG_MODULE_REGISTER(sta, CONFIG_LOG_DEFAULT_LEVEL);
 #include "shell_utils.h"
 #include "net_private.h"
 #include "bt_main.h"
+
+#define INTERVAL_MIN 0x140 /* 320 units, 400 ms */
+#define INTERVAL_MAX 0x140 /* 320 units, 400 ms */
+#define CONN_LATENCY 0
+
+#define MIN_CONN_INTERVAL   6
+#define MAX_CONN_INTERVAL   3200
+#define SUPERVISION_TIMEOUT 1000
+
+
 #define WIFI_SHELL_MODULE "wifi"
 
 #define WIFI_SHELL_MGMT_EVENTS (NET_EVENT_WIFI_CONNECT_RESULT |		\
@@ -85,6 +95,18 @@ static void run_wifi_benchmark(void);
 K_THREAD_DEFINE(run_wifi_traffic,
 		CONFIG_WIFI_THREAD_STACK_SIZE,
 		run_wifi_benchmark,
+		NULL,
+		NULL,
+		NULL,
+		CONFIG_WIFI_THREAD_PRIORITY,
+		0,
+		K_TICKS_FOREVER); /* K_FOREVER gives compilation warning k_timeout->int */
+
+static void run_bt_benchmark(void);
+
+K_THREAD_DEFINE(run_bt_traffic,
+		CONFIG_WIFI_THREAD_STACK_SIZE,
+		run_bt_benchmark,
 		NULL,
 		NULL,
 		NULL,
@@ -399,6 +421,11 @@ int wait_for_next_event(const char *event_name, int timeout)
 	return 0;
 }
 
+static void run_bt_benchmark(void)
+{
+	test_run();
+}
+
 void main(void)
 {
 	context.all = 0U;
@@ -441,7 +468,12 @@ void main(void)
 
 	select_role(CONFIG_COEX_BT_CENTRAL == 1 ? true : false);
 	/* Sleep 3 seconds to allow the BT get connected */
-	k_sleep(K_SECONDS(10));
+	k_sleep(K_SECONDS(5));
+	connection_configuration_set(BT_LE_CONN_PARAM(INTERVAL_MIN, INTERVAL_MAX, CONN_LATENCY,
+				       SUPERVISION_TIMEOUT),
+			BT_CONN_LE_PHY_PARAM_2M,
+			BT_LE_DATA_LEN_PARAM_MAX);
+	k_sleep(K_SECONDS(5));
 	printk("Timeout for BT config.\n");
 
 
@@ -454,11 +486,12 @@ void main(void)
 	 */
 	if (CONFIG_COEX_BT_CENTRAL)
 	{
-		shell_execute_cmd(shell_backend_uart_get_ptr(), "run");
+		k_thread_start(run_bt_traffic);
 	}
 
 
 	k_thread_join(run_wifi_traffic, K_FOREVER);
+	k_thread_join(run_bt_traffic, K_FOREVER);
 
 	/* TODO - Enable SR Coex using net_mgmt API (TBD by BLE Team)*
 

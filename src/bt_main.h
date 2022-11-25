@@ -7,6 +7,9 @@
 #ifndef THROUGHPUT_MAIN_H_
 #define THROUGHPUT_MAIN_H_
 
+int connection_configuration_set(const struct bt_le_conn_param *conn_param,
+			const struct bt_conn_le_phy_param *phy,
+			const struct bt_conn_le_data_len_param *data_len);
 /**
  * @brief Run the test
  *
@@ -15,10 +18,7 @@
  * @param phy         Phy parameters.
  * @param data_len    Maximum transmission payload.
  */
-int test_run(const struct shell *shell,
-	     const struct bt_le_conn_param *conn_param,
-	     const struct bt_conn_le_phy_param *phy,
-	     const struct bt_conn_le_data_len_param *data_len);
+int test_run(void);
 
 /**
  * @brief Set the board into a specific role.

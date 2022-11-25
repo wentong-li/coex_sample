@@ -556,7 +556,8 @@ int test_run()
 	stamp = k_uptime_get_32();
 
 	uint16_t count = 200;
-	while (count > 0) {
+	delta = 0;
+	while (true) {
 		err = bt_throughput_write(&throughput, dummy, 495);
 		if (err) {
 			printk("GATT write failed (err %d)", err);
@@ -571,7 +572,10 @@ int test_run()
 		// printk("%s", str_buf);
 
 		data += 495;
-		count--;
+		// count--;
+		if (k_uptime_get_32() - stamp > 10000) {
+			break;
+		}
 	}
 
 	delta = k_uptime_delta(&stamp);
